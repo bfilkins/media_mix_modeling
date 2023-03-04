@@ -1,12 +1,9 @@
 
-selected_measures <- c("youtube_spend")
-
 spend_data_filtered <- spend_data |>
   pivot_longer(cols = 2:9) |>
   filter(
     name != "conversions",
-    name != "tv_spend",
-    report_date <= date("2022-1-10")
+    name != "tv_spend"
     )
 
 plot_spend_trends <- spend_data_filtered |>
@@ -39,4 +36,5 @@ plot_spend_summary <- spend_data_filtered |>
   ) |>
   hc_xAxis(title = list(text = ""))
 
+plot_spend_summary
 

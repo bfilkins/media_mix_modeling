@@ -21,63 +21,35 @@ source("src/analysis.R")
 
 # Define UI for app ####
 
-ui = grid_page(
+ui = fluidPage(
   useShinyjs(),
   tags$style(".grid_card_text {border-color: transparent;}"),
   theme = my_theme,
-  layout = c(
-    ".     header  .",
-    "sidebar   trend   bar"
+  titlePanel("This is f'in awesome"),
+  # Main Panel features start 
+  mainPanel(
+    width = 12,
+  fluidRow(
+    column(4),
+    column(width = 2,
+           dateInput(inputId = "navigation_start_range",
+                     label = "Range Start",
+                     value = date("2022-1-1"))),
+    column(width = 2, dateInput(inputId = "navigation_end_range",
+                     label = "Range End",
+                     value = date("2022-1-3"))
+    )
   ),
-  row_sizes = c(
-    "70px",
-    "1fr"
+  fluidRow(
+      column(6, highchartOutput(outputId = "spend_trend")),
+      column(6, highchartOutput(outputId = "plot_spend_summary"))
   ),
-  col_sizes = c(
-    "250px", 
-    "1fr",
-    "1fr"
-  ),
-  gap_size = "2rem",
-  # Define sidebar items
-  div(id = "sidebar_div",
-  grid_card(
-    area = "sidebar",
-    item_alignment = "top",
-    collapsible = TRUE,
-    title = "Settings",
-    item_gap = "12px",
-    imageOutput("filter", height = 50),
-    selectizeInput(
-      inputId = "selected_tiers",
-      label = "Select Tiers",
-      multiple = TRUE,
-      choices = c("tier1", "tier2","tier3")
-    ),
-    dateInput(inputId = "navigation_start_range",
-              label = "Range Start",
-              value = date("2022-1-1")),
-    dateInput(inputId = "navigation_end_range",
-              label = "Range End",
-              value = date("2022-1-3"))
-    )),
-  grid_card_text(
-    area = "header",
-    content = "media mix modeling",
-    alignment = "center",
-    has_border = FALSE,
-    is_title = FALSE
-  ),
-  grid_card(
-      "trend",
-      highchartOutput(outputId = "spend_trend"),
-      has_border = FALSE
-  ),
-  grid_card(
-    "bar",
-    highchartOutput(outputId = "spend_summary"),
-    has_border = FALSE
+  titlePanel("Another f in title!!! Woo"),
+  fluidRow(
+    column(6, highchartOutput(outputId = "effect_contribution")),
+    column(6, highchartOutput(outputId = "pareto_frontier"))
   )
+)
 )
 
 
@@ -90,7 +62,10 @@ server <- function(input, output, session) {
   #source("src/fakeserver.R", local = TRUE)$value
 
   output$spend_trend <- renderHighchart(plot_spend_trends)
-  output$spend_summary <- renderHighchart(plot_spend_summary)
+  output$plot_spend_summary <- renderHighchart(plot_spend_summary)
+  output$effect_contribution <- renderHighchart(effect_contribution)
+  output$pareto_frontier <- renderHighchart(pareto_scatter)
+  
   
   output$filter <- renderImage(
     list(

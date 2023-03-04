@@ -1,5 +1,5 @@
 
-font_selected <- "Montserrat"
+font_selected <- "Quicksand"
 
 # library(showtext)
 # this_font <- font_add_google(name = font_selected)
@@ -84,3 +84,4 @@ my_theme <- bs_theme(
   secondary = fg_color,
   base_font =  font_selected
 )
+
