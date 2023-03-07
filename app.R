@@ -16,14 +16,15 @@ source("src/theme.R")
 source("src/load_data.R")
 
 # Adhoc analysis
-# Load data
 source("src/analysis.R")
+
+# Define chart functions
+
 
 # Define UI for app ####
 
 ui = fluidPage(
   useShinyjs(),
-  tags$style(".grid_card_text {border-color: transparent;}"),
   theme = my_theme,
   titlePanel("This is f'in awesome"),
   # Main Panel features start 
@@ -37,12 +38,13 @@ ui = fluidPage(
                      value = date("2022-1-1"))),
     column(width = 2, dateInput(inputId = "navigation_end_range",
                      label = "Range End",
-                     value = date("2022-1-3"))
-    )
+                     value = date("2022-1-3"))),
+    column(width = 1,icon("circle-info", "fa-3x")),
+    column(width = 1, materialSwitch(inputId = "first_plot_toggle", label = "trend vs. summary"))
   ),
   fluidRow(
-      column(6, highchartOutput(outputId = "spend_trend")),
-      column(6, highchartOutput(outputId = "plot_spend_summary"))
+      column(6, highchartOutput(outputId = "first_plot")),
+      column(6) 
   ),
   titlePanel("Another f in title!!! Woo"),
   fluidRow(
@@ -58,14 +60,41 @@ ui = fluidPage(
 # Define Server
 server <- function(input, output, session) {
 
+  # rv <- reactiveValues()
+  # 
+  # observe({
+  #   x <- input$first_plot_toggle
+  #   # condition tested
+  #   if (x == TRUE) rv$first_plot_toggle <- plot_spend_trends
+  #   else rv$first_plot_toggle <- plot_spend_summary
+  # })
   #source("src/server.R", local = TRUE)$value
   #source("src/fakeserver.R", local = TRUE)$value
-
-  output$spend_trend <- renderHighchart(plot_spend_trends)
-  output$plot_spend_summary <- renderHighchart(plot_spend_summary)
+  #value <- reactive({input$first_plot_toggle})
+  # first_plot <- reactive({
+  #   #value = input$first_plot_toggle
+  #   print(input$first_plot_toggle)
+  #   chart = ifelse(input$first_plot_toggle == TRUE, plot_spend_trends, plot_spend_summary)
+  #   return(chart)})
+  output$first_plot <- renderHighchart({
+    
+    if (input$first_plot_toggle)
+      plot_spend_trends
+    else
+      plot_spend_summary})
+    
+   # renderHighchart(plot_spend_trends)})
+  #output$first_plot <- renderHighchart(plot_spend_trends)
+  #output$plot_spend_summary <- renderHighchart(plot_spend_summary)
   output$effect_contribution <- renderHighchart(effect_contribution)
   output$pareto_frontier <- renderHighchart(pareto_scatter)
   
+  observeEvent(input$show, {
+    showModal(modalDialog(
+      title = "Important message",
+      "This is an important message!"
+      ))
+    })
   
   output$filter <- renderImage(
     list(
