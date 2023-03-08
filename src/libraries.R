@@ -15,4 +15,5 @@ library(wesanderson)
 # set python environment prior to loading robyn
 Sys.setenv(RETICULATE_PYTHON = "~/.virtualenvs/r-reticulate/bin/python")
 library(Robyn)
+library(shinyWidgets)
 
