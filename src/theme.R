@@ -9,6 +9,18 @@ bg_color <- "#FFFFFF"
 fg_color <- "#363636"
 detail_color <- "#444444"
 
+green_purple_theme <- list(
+  "yellow" = "#F0E14C",
+           "sgbus-green" = "#6bd425ff",
+           "avocado" = "#618b25ff",
+           "blue" = "#1F77B4",
+           "dark-purple" = "#42113cff",
+           "dark-purple-2" = "#370926ff",
+           "gray1" = "#D3D3D3",
+           "gray2" = "#A9A9A9"
+)
+
+
 
 beercolors <- list(
   "darkblue" = "#0F6A94",

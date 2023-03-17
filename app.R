@@ -1,4 +1,4 @@
-# Title: app.R script for nupath shiny app
+# Title: app.R script for marketing dashboard example
 # Author: Brendan Filkins
 # Date: 2022-11-4
 # Notes:
@@ -15,51 +15,55 @@ source("src/theme.R")
 # Load data
 source("src/load_data.R")
 
-# Adhoc analysis
-#source("src/analysis.R")
-# Media mix modeling (output saved)
+# Adhoc analysis and media mix modeling
+# source("src/analysis.R")
+# source("src/in_progress/media_mix_modeling.R")
 
 # Define UI for app ####
 
 ui = fluidPage(
   useShinyjs(),
   theme = my_theme,
-  titlePanel("Media Mix Modeling with Facebook's Robyn algorithm"),
   # Main Panel features start 
   mainPanel(
     width = 12,
-  fluidRow(
-    column(width = 2, materialSwitch(inputId = "first_plot_toggle", label = "trend vs. summary")),
-    column(width = 2,
-           dateInput(inputId = "start_date",
-                     label = "Range Start",
-                     value = date("2021-1-1"))),
-    column(width = 2, 
-           dateInput(inputId = "end_date",
-                     label = "Range End",
-                     value = date("2021-8-1"))),
-    column(3),
-    column(
-      width = 3,
-      actionButton(
-        inputId = "info_modal", 
-        label = "learn more about robyn", 
+    fluidRow(
+      style="padding-bottom:20px; padding-top:20px;",
+      column(3, titlePanel("Marketing Performance")),
+      column(3),
+      column(3, titlePanel("Media Mix Modeling")),
+      column(3, actionLink(
+        inputId = "info_modal",
+        label = "learn more about robyn",
         icon("circle-info"),
         style = glue::glue("background-color:", bg_color, "; color:", fg_color)
-        ))
-  ),
-  fluidRow(
-      column(6, highchartOutput(outputId = "first_plot")),
-      column(3),
-      column(3, textOutput(outputId = "text_test"))
-  ),
-  titlePanel("Another f in title!!! Woo"),
-  fluidRow(
-    column(6, highchartOutput(outputId = "effect_contribution")),
-    column(6, highchartOutput(outputId = "pareto_frontier"))
+      ))),
+    fluidRow(
+      column(4, highchartOutput(outputId = "first_plot")),
+      column(2, h2(textOutput(outputId = "total_spend")), p("spend"),
+             h2(textOutput(outputId = "conversions")), p("sales"),
+             h2(textOutput(outputId = "roas")), p("ROAS")),
+      column(3, highchartOutput(outputId = "pareto_frontier")),
+      column(3, highchartOutput(outputId = "effect_contribution"))
+    ),
+    fluidRow(
+      column(
+        width = 2, 
+        materialSwitch(inputId = "first_plot_toggle", label = "trend vs. summary")
+      ),
+      column(width = 1,
+             dateInput(inputId = "start_date",
+                       label = "start date",
+                       value = date("2021-1-1"))),
+      column(width = 1,
+             dateInput(inputId = "end_date",
+                       label = "end date",
+                       value = date("2021-8-1"))),
+      column(2)
+    )
   )
 )
-)
+
 
 
 
@@ -80,10 +84,11 @@ server <- function(input, output, session) {
   
   plot_spend_summary <- reactive({
     example_data() |>
+      filter(name != "conversions") |>
       group_by(name) |>
       summarise(spend = sum(value)) |>
       arrange(desc(spend)) |>
-      hchart("bar", hcaes(x = reorder(as.factor(name), desc(spend)), y = spend), color = beercolors$light_brown) |>
+      hchart("bar", hcaes(x = reorder(as.factor(name), desc(spend)), y = spend), color = green_purple_theme$`sgbus-green`) |>
       hc_title(
         text = "eCommerce company media spend trend",
         margin = 20,
@@ -99,10 +104,11 @@ server <- function(input, output, session) {
   
   plot_spend_trends <- reactive({
     example_data() |>
+      filter(name != "conversions") |>
       hchart("line", hcaes(x = report_date, y = value, group = name)) |>
       hc_colors(c(
-        beercolors$darkblue, beercolors$light_brown, beercolors$fiddlehead_light_green,
-        beercolors$light_blue, beercolors$bbco_blue, beercolors$zero_gravity_madonna_yellow)) |>
+        green_purple_theme$`sgbus-green`, green_purple_theme$avocado, green_purple_theme$`dark-purple`,
+        green_purple_theme$gray1, green_purple_theme$yellow, green_purple_theme$blue, green_purple_theme$gray2)) |>
       hc_title(
         text = "eCommerce company media spend trend",
         margin = 20,
@@ -116,7 +122,7 @@ server <- function(input, output, session) {
 
   output$first_plot <- renderHighchart({
     if
-    (input$first_plot_toggle)
+    (!input$first_plot_toggle)
      plot_spend_trends()
     else
       plot_spend_summary()
@@ -129,15 +135,21 @@ server <- function(input, output, session) {
       hchart(
         "scatter",
         hcaes(x = nrmse, y = decomp.rssd, group = solID),
-        color = beercolors$fiddlehead_light_green,
+        color = green_purple_theme$`dark-purple` ,
         style = list(fontFamily = "Quicksand"),
         tooltip = list(pointFormat = "model: {point.solID} <br> nrsme: {point.nrmse} <br> {point.decomp.rssd}")
       ) |>
       hc_plotOptions(series = list(events = list(mouseOver = legendMouseOverFunction))) |>
       hc_title(
-        text = "Optimal Model Clusters (7 Pareto frontiers for multi-objective optimization)",
+        text = "Multi-objective model performance",
         margin = 20,
-        align = "left",
+        align = "center",
+        style = list(useHTML = TRUE)
+      ) |>
+      hc_subtitle(
+        text = "7 pareto frontiers",
+        margin = 20,
+        align = "center",
         style = list(useHTML = TRUE)
       ) |>
       hc_yAxis(#title = list(text = ""),
@@ -150,7 +162,37 @@ server <- function(input, output, session) {
     input$legendmouseOver
   })
   
-  #output$text_test <- renderText(selected_model())
+  output$total_spend <- renderText(
+    example_data() |>
+      filter(name != "conversions") |>
+      summarise(value = sum(value)) |>
+      mutate(spend_formatted = scales::dollar_format()(value)) |>
+      pull(spend_formatted)
+  )
+  
+  output$conversions <- renderText(
+    example_data() |>
+      filter(name == "conversions") |>
+      summarise(value = sum(value)) |>
+      mutate(spend_formatted = scales::comma_format()(value)) |>
+      pull(spend_formatted)
+  )
+  
+  output$roas <- renderText({
+    
+    total_spend <- example_data() |>
+        filter(name != "conversions") |>
+        summarise(value = sum(value)) |>
+        pull(value)
+    
+    conversions <- example_data() |>
+        filter(name == "conversions") |>
+        summarise(value = sum(value)) |>
+        pull(value)
+    
+    roas <- total_spend/conversions
+    return(roas)
+  })
   
   output$effect_contribution <- renderHighchart({
     selected_model = selected_model()
@@ -162,11 +204,12 @@ server <- function(input, output, session) {
       arrange(desc(xDecompAgg)) |>
       hchart(
         "bar",
-        hcaes(x = reorder(as.factor(rn), xDecompAgg), y = xDecompAgg),
+        hcaes(x = rn, y = xDecompAgg),
+        color = green_purple_theme$avocado,
         style = list(fontFamily = "Quicksand")
       ) |>
       hc_title(
-        text = "Marketing Mix Models: Calculate pareto fronts for multi-objective optimization",
+        text = "Channel contribution to sales",
         margin = 20,
         align = "left",
         style = list(useHTML = TRUE)
@@ -174,14 +217,14 @@ server <- function(input, output, session) {
       hc_yAxis(
         #title = list(text = ""),
         #limits = c(0,100000),
-        plotBands = list(
-          list(
-            from = 200000,
-            to = 600000,
-            color = "rgba(100, 0, 0, 0.1)",
-            label = list(text = "This is a plotBand")
-          )
-        ),
+        # plotBands = list(
+        #   list(
+        #     from = 200000,
+        #     to = 600000,
+        #     color = "rgba(100, 0, 0, 0.1)",
+        #     label = list(text = "This is a plotBand")
+        #   )
+        # ),
         labels = list(format = "{value}")
       )}
     )
