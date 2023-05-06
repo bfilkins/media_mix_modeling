@@ -64,8 +64,9 @@ OutputModels <- robyn_run(
 # # no I still don't understand this!!!
 
 # just load this to trouble shoot below
-# saved_run <- write_rds(OutputModels, "output_models.rds")
+saved_run <- write_rds(OutputModels, "output_models.rds")
 # OutputModels <- read_rds("output_models.rds")
+OutputModels <- read_rds("output_models.rds")
 
 
 robyn_object <- getwd()
@@ -74,12 +75,13 @@ OutputCollect <- robyn_outputs(
   InputCollect = InputCollect, 
   OutputModels = OutputModels, 
   pareto_fronts = 7,
-  #csv_out = "all", # "pareto" or "all"
-  #plot_folder = robyn_object,
+  #csv_out = "pareto", # "pareto" or "all"
+  plot_folder = robyn_object,
   clusters = TRUE, # Set to TRUE to cluster similar models by ROAS. See ?robyn_clusters
-  plot_pareto = FALSE # Set to FALSE to deactivate plotting and saving model one-pagers, 
+  plot_pareto = TRUE # Set to FALSE to deactivate plotting and saving model one-pagers, 
 )
-
+write_rds(OutputCollect, "output_collect.rds")
+OutputCollect <- read_rds( "output_collect.rds")
 pareto_frontier_model_data <- OutputCollect$xDecompAgg
 
 #write_rds(pareto_frontier_model_data, "pareto_frontier_model_data.rds")

@@ -24,29 +24,17 @@ source("src/load_data.R")
 ui = fluidPage(
   useShinyjs(),
   theme = my_theme,
+  tags$style(
+    type = "text/css",
+    paste0(
+      "body{background-image: linear-gradient(to right top,", bg_color, ", ", cool_winter_theme$light_gray, ", ", bg_color,", ", bg_color, ");}" 
+    )
+  ),
   # Main Panel features start 
   mainPanel(
     width = 12,
     fluidRow(
-      style="padding-bottom:20px; padding-top:20px;",
-      column(3, titlePanel("Marketing Performance")),
-      column(3),
-      column(3, titlePanel("Media Mix Modeling")),
-      column(3, actionLink(
-        inputId = "info_modal",
-        label = "learn more about robyn",
-        icon("circle-info"),
-        style = glue::glue("background-color:", bg_color, "; color:", fg_color)
-      ))),
-    fluidRow(
-      column(4, highchartOutput(outputId = "first_plot")),
-      column(2, h2(textOutput(outputId = "total_spend")), p("spend"),
-             h2(textOutput(outputId = "conversions")), p("sales"),
-             h2(textOutput(outputId = "roas")), p("ROAS")),
-      column(3, highchartOutput(outputId = "pareto_frontier")),
-      column(3, highchartOutput(outputId = "effect_contribution"))
-    ),
-    fluidRow(
+      #style="padding-bottom:5px; padding-top:5px;",
       column(
         width = 2, 
         materialSwitch(inputId = "first_plot_toggle", label = "trend vs. summary")
@@ -54,12 +42,45 @@ ui = fluidPage(
       column(width = 1,
              dateInput(inputId = "start_date",
                        label = "start date",
-                       value = date("2021-1-1"))),
+                       value = date("2021-6-1"))),
       column(width = 1,
              dateInput(inputId = "end_date",
                        label = "end date",
                        value = date("2021-8-1"))),
       column(2)
+    ),
+    fluidRow(
+      #style="padding-bottom:10px; padding-top:10px;",
+      column(6, titlePanel("Marketing Performance")),
+      column(3, titlePanel("Summary")),
+      column(3)
+      ),
+    fluidRow(
+      column(6, 
+        highchartOutput(outputId = "first_plot")),
+      #column(3),
+      column(3, 
+      fluidRow(h2(textOutput(outputId = "total_spend")), p("spend")),
+      fluidRow(h2(textOutput(outputId = "conversions")), p("sales")),
+      fluidRow(h2(textOutput(outputId = "roas")), p("ROAS"))
+      )),
+    fluidRow(
+      column(4, titlePanel("Media Mix Modeling")),
+      column(4, actionLink(
+        inputId = "info_modal",
+        label = "learn more about robyn",
+        icon("circle-info"),
+        style = glue::glue("background-color:", cool_winter_theme$light_gray, "; color:", fg_color)
+      )),
+      column(
+        width = 4, 
+        materialSwitch(inputId = "toggle_roi_vs_contribution", label = "contribution vs. roas")
+      ),
+    ),
+    fluidRow(
+      column(4, highchartOutput(outputId = "pareto_frontier")),
+      column(4, highchartOutput(outputId = "actual_vs_predicted")),
+      column(4, highchartOutput(outputId = "second_toggle_plot"))
     )
   )
 )
@@ -68,8 +89,23 @@ ui = fluidPage(
 
 
 
-# Define Server
+# Define Server ####
 server <- function(input, output, session) {
+  
+  easeOutBounce  <- JS("function (pos) {
+    if ((pos) < (1 / 2.75)) {
+      return (7.5625 * pos * pos);
+    }
+    if (pos < (2 / 2.75)) {
+      return (7.5625 * (pos -= (1.5 / 2.75)) * pos + 0.75);
+    }
+    if (pos < (2.5 / 2.75)) {
+      return (7.5625 * (pos -= (2.25 / 2.75)) * pos + 0.9375);
+    }
+    return (7.5625 * (pos -= (2.625 / 2.75)) * pos + 0.984375);
+    }")
+  
+  legendMouseOverFunction <- JS("function(event) {Shiny.onInputChange('legendmouseOver', this.name);}")
   
   start_date <- reactive(input$start_date)
   end_date <- reactive(input$end_date)
@@ -88,7 +124,7 @@ server <- function(input, output, session) {
       group_by(name) |>
       summarise(spend = sum(value)) |>
       arrange(desc(spend)) |>
-      hchart("bar", hcaes(x = reorder(as.factor(name), desc(spend)), y = spend), color = green_purple_theme$`sgbus-green`) |>
+      hchart("bar", hcaes(x = reorder(as.factor(name), desc(spend)), y = spend), color = cool_winter_theme$baby_blue) |>
       hc_title(
         text = "eCommerce company media spend trend",
         margin = 20,
@@ -107,8 +143,10 @@ server <- function(input, output, session) {
       filter(name != "conversions") |>
       hchart("line", hcaes(x = report_date, y = value, group = name)) |>
       hc_colors(c(
-        green_purple_theme$`sgbus-green`, green_purple_theme$avocado, green_purple_theme$`dark-purple`,
-        green_purple_theme$gray1, green_purple_theme$yellow, green_purple_theme$blue, green_purple_theme$gray2)) |>
+        cool_winter_theme$off_white, cool_winter_theme$pastel_orange, 
+        cool_winter_theme$dark_gray, cool_winter_theme$forest_green,
+        cool_winter_theme$mid_gray, cool_winter_theme$light_blue,
+        cool_winter_theme$baby_blue)) |>
       hc_title(
         text = "eCommerce company media spend trend",
         margin = 20,
@@ -129,13 +167,12 @@ server <- function(input, output, session) {
     })
   
   output$pareto_frontier <- renderHighchart({
-    legendMouseOverFunction <- JS("function(event) {Shiny.onInputChange('legendmouseOver', this.name);}")
     model_scatter_data |> 
       filter(!is.na(cluster)) |>
       hchart(
         "scatter",
         hcaes(x = nrmse, y = decomp.rssd, group = solID),
-        color = green_purple_theme$`dark-purple` ,
+        color = cool_winter_theme$light_blue,
         style = list(fontFamily = "Quicksand"),
         tooltip = list(pointFormat = "model: {point.solID} <br> nrsme: {point.nrmse} <br> {point.decomp.rssd}")
       ) |>
@@ -194,19 +231,85 @@ server <- function(input, output, session) {
     return(roas)
   })
   
-  output$effect_contribution <- renderHighchart({
+  
+  actual_vs_predicted_plot <- reactive({
+    
+    model_0 = selected_model()
+    
+    model = if_else(is.na(model_0),"3_114_4",model_0)
+    
+    performance_string <- paste0("OutputCollect$allPareto$plotDataCollect$`",model,"`$plot5data$xDecompVecPlotMelted")
+    
+    performance <- eval(parse_expr(performance_string))
+    
+    OutputCollect$allPareto$xDecompAgg$train_size[1]
+    
+    train_size <- round(OutputCollect$allPareto$xDecompAgg$train_size[1],4)
+    days <- sort(unique(performance$ds))
+    ndays <- length(days)
+    train_cut <- round(ndays * train_size)
+    val_cut <- train_cut + round(ndays * (1 - train_size)/2)
+    
+    train_date <- min(performance$ds)+train_cut
+    val_date <- min(performance$ds)+val_cut
+    
+    
+    actual_vs_predicted <- performance |>
+      hchart(
+        "line", 
+        hcaes(x = ds, y = value, group = variable),
+        animation = list(
+          duration = 2000
+        )) |>
+      hc_colors(c(cool_winter_theme$baby_blue, cool_winter_theme$dark_gray)) |>
+      hc_title(
+        text = "Actual vs. predicted sales",
+        margin = 20,
+        align = "left",
+        style = list(useHTML = TRUE)
+      ) |>
+      hc_yAxis(
+        title = list(text = "sales"),
+        labels = list(format = "{value}")
+      ) |>
+      hc_xAxis(
+        type = 'datetime',
+        plotLines = list(
+          list(
+            label = list(text = "test"),
+            color = "#CCCCCC",
+            width = 4,
+            value = datetime_to_timestamp(train_date)
+          ),
+          list(
+            label = list(text = "validation"),
+            color = "#CCCCCC",
+            width = 4,
+            value = datetime_to_timestamp(val_date)
+          )
+        )
+      )
+  })
+  
+  output$actual_vs_predicted <- renderHighchart({actual_vs_predicted_plot()})
+  
+  effect_contribution <- reactive({
     selected_model = selected_model()
     model_data |>
       filter(
         solID == selected_model,
-        #!is.na(effect_share)
+        !is.na(effect_share)
       ) |>
-      arrange(desc(xDecompAgg)) |>
+      arrange(desc(xDecompPercRF)) |>
       hchart(
         "bar",
-        hcaes(x = rn, y = xDecompAgg),
-        color = green_purple_theme$avocado,
-        style = list(fontFamily = "Quicksand")
+        hcaes(x = as.factor(rn), y = xDecompPercRF),
+        color = cool_winter_theme$mid_gray,
+        style = list(fontFamily = "Quicksand"),
+        animation = list(
+          duration = 3000,
+          easing = easeOutBounce
+        )
       ) |>
       hc_title(
         text = "Channel contribution to sales",
@@ -214,21 +317,63 @@ server <- function(input, output, session) {
         align = "left",
         style = list(useHTML = TRUE)
       ) |>
+      hc_plotOptions(
+        animation = list(
+          duration = 2
+        )
+      ) |>
+      hc_yAxis(min = 0) |>
       hc_yAxis(
-        #title = list(text = ""),
-        #limits = c(0,100000),
-        # plotBands = list(
-        #   list(
-        #     from = 200000,
-        #     to = 600000,
-        #     color = "rgba(100, 0, 0, 0.1)",
-        #     label = list(text = "This is a plotBand")
-        #   )
-        # ),
         labels = list(format = "{value}")
-      )}
+      ) |>
+      hc_xAxis(title = list(text = ""))
+    }
     )
   
+  return_on_adspend <- reactive({
+    selected_model = selected_model()
+    model_data |>
+      filter(
+        solID == selected_model,
+        !is.na(roi_total)
+      ) |>
+      arrange(desc(roi_total)) |>
+      hchart(
+        "bar",
+        hcaes(x = as.factor(rn), y = roi_total),
+        color = cool_winter_theme$forest_green,
+        style = list(fontFamily = "Quicksand"),
+        animation = list(
+          duration = 3000,
+          easing = easeOutBounce
+        )
+      ) |>
+      hc_title(
+        text = "Return on Ad Spend",
+        margin = 20,
+        align = "left",
+        style = list(useHTML = TRUE)
+      ) |>
+      hc_plotOptions(
+        animation = list(
+          duration = 2
+        )
+      ) |>
+      hc_yAxis(min = 0) |>
+      hc_yAxis(
+        labels = list(format = "{value}")
+      ) |>
+      hc_xAxis(title = list(text = ""))
+  }
+  )
+  
+  output$second_toggle_plot <- renderHighchart({
+    if
+    (!input$toggle_roi_vs_contribution)
+      return_on_adspend()
+    else
+      effect_contribution()
+  })
   
   observeEvent(input$info_modal, {
     showModal(modalDialog(

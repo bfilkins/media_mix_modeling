@@ -1,4 +1,4 @@
-#library(reticulate)
+library(reticulate)
 library(tidyverse)
 #library(aws.s3)
 library(tictoc)
@@ -12,7 +12,7 @@ library(readxl)
 library(shinyjs)
 library(wesanderson)
 # set python environment prior to loading robyn
-# Sys.setenv(RETICULATE_PYTHON = "~/.virtualenvs/r-reticulate/bin/python")
-#library(Robyn)
+Sys.setenv(RETICULATE_PYTHON = "~/.virtualenvs/r-reticulate/bin/python")
+library(Robyn)
 library(shinyWidgets)
-
+#library(bs4Dash)

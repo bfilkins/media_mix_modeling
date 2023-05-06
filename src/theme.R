@@ -20,6 +20,18 @@ green_purple_theme <- list(
            "gray2" = "#A9A9A9"
 )
 
+cool_winter_theme <- list(
+  "forest_green" = "#78B693",
+  "baby_blue" = "#ABCEEF",
+  "light_blue" = "#5688b0",
+  "deep_blue" = "#3D587B",
+  "light_gray" = "#D3D3D3",
+  "mid_gray" = "#888797",
+  "dark_gray" = "#464646",
+  "pastel_orange" = "#e09346",
+  "off_white" = "#E8ECEE"
+)
+
 
 
 beercolors <- list(
