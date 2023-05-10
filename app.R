@@ -27,7 +27,10 @@ ui = fluidPage(
   tags$style(
     type = "text/css",
     paste0(
-      "body{background-image: linear-gradient(to right top,", bg_color, ", ", cool_winter_theme$light_gray, ", ", bg_color,", ", bg_color, ");}" 
+      "body{background-image: linear-gradient(to right top,", bg_color, ", ", cool_winter_theme$light_gray, ", ", bg_color,", ", bg_color, ");}
+      .transparentBackgroundColorMixin(@alpha,@color) {
+        background-color: rgba(red(@color), green(@color), blue(@color), @alpha);
+        }" 
     )
   ),
   # Main Panel features start 
@@ -70,7 +73,9 @@ ui = fluidPage(
         inputId = "info_modal",
         label = "learn more about robyn",
         icon("circle-info"),
-        style = glue::glue("background-color:", cool_winter_theme$light_gray, "; color:", fg_color)
+        style = glue::glue(
+          ".transparentBackgroundColorMixin:(1,#FFFFFF)", #cool_winter_theme$light_gray,
+          "; color:", fg_color)
       )),
       column(
         width = 4, 
@@ -195,7 +200,13 @@ server <- function(input, output, session) {
       hc_legend(enabled = FALSE)
     })
   
-  selected_model = eventReactive(input$legendmouseOver, {
+  values <- reactiveValues(default = 0)
+  
+  observeEvent(input$legendmouseOver,{
+    values$default <- input$legendmouseOver
+  })
+  
+  selected_model =  eventReactive(input$legendmouseOver, {
     input$legendmouseOver
   })
   
@@ -234,9 +245,12 @@ server <- function(input, output, session) {
   
   actual_vs_predicted_plot <- reactive({
     
-    model_0 = selected_model()
-    
-    model = if_else(is.na(model_0),"3_114_4",model_0)
+    model = if(values$default == 0){
+      "3_114_4"
+    }
+    else{
+      selected_model()
+    }
     
     performance_string <- paste0("OutputCollect$allPareto$plotDataCollect$`",model,"`$plot5data$xDecompVecPlotMelted")
     
@@ -294,7 +308,14 @@ server <- function(input, output, session) {
   output$actual_vs_predicted <- renderHighchart({actual_vs_predicted_plot()})
   
   effect_contribution <- reactive({
-    selected_model = selected_model()
+    
+    selected_model = if(values$default == 0){
+      "3_114_4"
+    }
+    else{
+      selected_model()
+    }
+    
     model_data |>
       filter(
         solID == selected_model,
@@ -331,7 +352,14 @@ server <- function(input, output, session) {
     )
   
   return_on_adspend <- reactive({
-    selected_model = selected_model()
+    
+    selected_model = if(values$default == 0){
+      "3_114_4"
+    }
+    else{
+      selected_model()
+    }
+    
     model_data |>
       filter(
         solID == selected_model,
@@ -377,8 +405,8 @@ server <- function(input, output, session) {
   
   observeEvent(input$info_modal, {
     showModal(modalDialog(
-      title = "Important message",
-      "This is an important message!"
+      title = "Media Mix Modeling",
+      "Robyn is an open source model originally developed by Facebook that uses ridge regression and evolutionary multi-objective optimization to estimate co-effecients for ad-stock decay and diminishing return curves"
       ))
     })
   
@@ -393,6 +421,7 @@ server <- function(input, output, session) {
 
 # Create Shiny app ----
 options(shiny.launch.browser = .rs.invokeShinyWindowExternal)
+
 shinyApp(ui = ui, server = server)
 
 
