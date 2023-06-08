@@ -37,22 +37,6 @@ ui = fluidPage(
   mainPanel(
     width = 12,
     fluidRow(
-      #style="padding-bottom:5px; padding-top:5px;",
-      column(
-        width = 2, 
-        materialSwitch(inputId = "first_plot_toggle", label = "trend vs. summary")
-      ),
-      column(width = 1,
-             dateInput(inputId = "start_date",
-                       label = "start date",
-                       value = date("2021-6-1"))),
-      column(width = 1,
-             dateInput(inputId = "end_date",
-                       label = "end date",
-                       value = date("2021-8-1"))),
-      column(2)
-    ),
-    fluidRow(
       #style="padding-bottom:10px; padding-top:10px;",
       column(6, titlePanel("Marketing Performance")),
       column(3, titlePanel("Summary")),
@@ -61,11 +45,26 @@ ui = fluidPage(
     fluidRow(
       column(6, 
         highchartOutput(outputId = "first_plot")),
-      #column(3),
       column(3, 
       fluidRow(h2(textOutput(outputId = "total_spend")), p("spend")),
       fluidRow(h2(textOutput(outputId = "conversions")), p("sales")),
-      fluidRow(h2(textOutput(outputId = "roas")), p("ROAS"))
+      fluidRow(h2(textOutput(outputId = "roas")), p("ROAS (not)")),
+      fluidRow(
+        column(
+          width = 6,
+          dateInput(
+            inputId = "start_date",
+            label = "start date",
+            value = start_date)
+          ),
+        column(
+          width = 6,
+          dateInput(
+            inputId = "end_date",
+            label = "end date",
+            value = end_date))
+        ),
+      fluidRow(materialSwitch(inputId = "first_plot_toggle", label = "trend vs. summary"))
       )),
     fluidRow(
       column(4, titlePanel("Media Mix Modeling")),
@@ -117,21 +116,28 @@ server <- function(input, output, session) {
   
   example_data <- reactive({spend_data_filtered |>
     filter(
-    report_date >= start_date(),
-    report_date <= end_date()
+    date >= start_date(),
+    date <= end_date()
     )})
   
   # define chart functions
   
   plot_spend_summary <- reactive({
     example_data() |>
-      filter(name != "conversions") |>
+      filter(name != "sales") |>
       group_by(name) |>
       summarise(spend = sum(value)) |>
       arrange(desc(spend)) |>
-      hchart("bar", hcaes(x = reorder(as.factor(name), desc(spend)), y = spend), color = cool_winter_theme$baby_blue) |>
+      hchart(
+        "bar",
+        hcaes(x = reorder(as.factor(name), desc(spend)), y = spend), 
+        color = cool_winter_theme$baby_blue,
+        animation = list(
+          duration = 3000,
+          easing = easeOutBounce
+        )) |>
       hc_title(
-        text = "eCommerce company media spend trend",
+        text = "media spend trend",
         margin = 20,
         align = "left",
         style = list(useHTML = TRUE)
@@ -145,8 +151,8 @@ server <- function(input, output, session) {
   
   plot_spend_trends <- reactive({
     example_data() |>
-      filter(name != "conversions") |>
-      hchart("line", hcaes(x = report_date, y = value, group = name)) |>
+      filter(name != "sales") |>
+      hchart("line", hcaes(x = date, y = value, group = name)) |>
       hc_colors(c(
         cool_winter_theme$off_white, cool_winter_theme$pastel_orange, 
         cool_winter_theme$dark_gray, cool_winter_theme$forest_green,
@@ -174,13 +180,15 @@ server <- function(input, output, session) {
   output$pareto_frontier <- renderHighchart({
     model_scatter_data |> 
       filter(!is.na(cluster)) |>
+      mutate(top_model = if_else(solID == "2_237_5", cool_winter_theme$pastel_orange, cool_winter_theme$deep_blue)) |>
       hchart(
         "scatter",
-        hcaes(x = nrmse, y = decomp.rssd, group = solID),
-        color = cool_winter_theme$light_blue,
+        hcaes(x = nrmse, y = decomp.rssd, group = solID, color = top_model),
         style = list(fontFamily = "Quicksand"),
+        #color = list(cool_winter_theme$baby_blue, cool_winter_theme$dark_gray),
         tooltip = list(pointFormat = "model: {point.solID} <br> nrsme: {point.nrmse} <br> {point.decomp.rssd}")
       ) |>
+      #hc_colors(c(cool_winter_theme$baby_blue, cool_winter_theme$dark_gray)) |>
       hc_plotOptions(series = list(events = list(mouseOver = legendMouseOverFunction))) |>
       hc_title(
         text = "Multi-objective model performance",
@@ -212,7 +220,7 @@ server <- function(input, output, session) {
   
   output$total_spend <- renderText(
     example_data() |>
-      filter(name != "conversions") |>
+      filter(name != "sales") |>
       summarise(value = sum(value)) |>
       mutate(spend_formatted = scales::dollar_format()(value)) |>
       pull(spend_formatted)
@@ -220,7 +228,7 @@ server <- function(input, output, session) {
   
   output$conversions <- renderText(
     example_data() |>
-      filter(name == "conversions") |>
+      filter(name == "sales") |>
       summarise(value = sum(value)) |>
       mutate(spend_formatted = scales::comma_format()(value)) |>
       pull(spend_formatted)
@@ -229,16 +237,16 @@ server <- function(input, output, session) {
   output$roas <- renderText({
     
     total_spend <- example_data() |>
-        filter(name != "conversions") |>
+        filter(name != "sales") |>
         summarise(value = sum(value)) |>
         pull(value)
     
     conversions <- example_data() |>
-        filter(name == "conversions") |>
+        filter(name == "sales") |>
         summarise(value = sum(value)) |>
         pull(value)
     
-    roas <- total_spend/conversions
+    roas <- scales::dollar_format()(total_spend/conversions)
     return(roas)
   })
   
@@ -246,7 +254,7 @@ server <- function(input, output, session) {
   actual_vs_predicted_plot <- reactive({
     
     model = if(values$default == 0){
-      "3_114_4"
+      "2_237_5"
     }
     else{
       selected_model()
@@ -308,9 +316,8 @@ server <- function(input, output, session) {
   output$actual_vs_predicted <- renderHighchart({actual_vs_predicted_plot()})
   
   effect_contribution <- reactive({
-    
     selected_model = if(values$default == 0){
-      "3_114_4"
+      "2_237_5"
     }
     else{
       selected_model()
@@ -352,9 +359,8 @@ server <- function(input, output, session) {
     )
   
   return_on_adspend <- reactive({
-    
     selected_model = if(values$default == 0){
-      "3_114_4"
+      "2_237_5"
     }
     else{
       selected_model()
@@ -370,11 +376,11 @@ server <- function(input, output, session) {
         "bar",
         hcaes(x = as.factor(rn), y = roi_total),
         color = cool_winter_theme$forest_green,
-        style = list(fontFamily = "Quicksand"),
-        animation = list(
-          duration = 3000,
-          easing = easeOutBounce
-        )
+        style = list(fontFamily = "Quicksand")#,
+        # animation = list(
+        #   duration = 3000,
+        #   easing = easeOutBounce
+        # )
       ) |>
       hc_title(
         text = "Return on Ad Spend",
@@ -423,6 +429,5 @@ server <- function(input, output, session) {
 options(shiny.launch.browser = .rs.invokeShinyWindowExternal)
 
 shinyApp(ui = ui, server = server)
-
 
 

@@ -1,8 +1,8 @@
  
 # load join, clean data ####
 
-start_date <- min(spend_data$report_date)
-end_date <- max(spend_data$report_date)
+start_date <- min(spend_data$date)
+end_date <- max(spend_data$date)
 
 # create variable array for model input object initialization and parameter range lists
 variables <- colnames(
@@ -14,8 +14,8 @@ variables <- colnames(
 input_initialize <- robyn_inputs(
   dt_input = spend_data,
   dt_holidays = dt_prophet_holidays,
-  date_var = "report_date",
-  dep_var = "conversions",
+  date_var = "date",
+  dep_var = "sales",
   dep_var_type = "conversion",
   prophet_vars = c("trend", "season", "holiday"),
   prophet_country = "US",
@@ -29,7 +29,7 @@ input_initialize <- robyn_inputs(
 # use recommended ranges for geometric adstock decay
 alpha_list_values <- c(.5, 3)
 gamma_list_values <- c(.3, 1)
-theta_list_values <- c(0, 0.3)
+theta_list_values <- c(0.05, 0.3) # a lot of digital dropping to 0
 shapes_list_values <- c(0.5, 2)
 scales_list_values <- c(0, .5)
 
@@ -56,7 +56,7 @@ InputCollect <- robyn_inputs(InputCollect = input_initialize, hyperparameters = 
 OutputModels <- robyn_run(
   InputCollect = InputCollect, # feed in all model specification
   cores = NULL, # NULL defaults to max available - 1
-  iterations = 1000, # 2000 recommended for the dummy dataset with no calibration
+  iterations = 2000, # 2000 recommended for the dummy dataset with no calibration
   trials = 5, # 5 recommended for the dummy dataset
   ts_validation = TRUE, # 3-way-split time series for NRMSE validation.
   add_penalty_factor = FALSE, # Experimental feature. Use with caution.
@@ -84,4 +84,4 @@ write_rds(OutputCollect, "output_collect.rds")
 OutputCollect <- read_rds( "output_collect.rds")
 pareto_frontier_model_data <- OutputCollect$xDecompAgg
 
-#write_rds(pareto_frontier_model_data, "pareto_frontier_model_data.rds")
+write_rds(pareto_frontier_model_data, "pareto_frontier_model_data.rds")

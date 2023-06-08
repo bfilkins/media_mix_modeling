@@ -1,13 +1,17 @@
 # Load Data 
 
 # arrow::write_parquet(spend_data,"anonymous_data.parquet")
-spend_data <- arrow::read_parquet("example_data.parquet") |>
-  filter(report_date <= date("2022-1-10"))
+spend_data <- arrow::read_parquet("model.parquet") |>
+  mutate(sales = as.numeric(sales))
+  #filter(report_date <= date("2022-1-10"))
 
+start_date <- min(spend_data$date)
+end_date <- max(spend_data$date)
 
 # pivot and filter 
 spend_data_filtered <- spend_data |>
-  pivot_longer(cols = 2:9)
+  pivot_longer(cols = 2:7) |> # abstract this
+  arrange(date)
 
 # Models 
 model_data <- readRDS("pareto_frontier_model_data.rds") 
